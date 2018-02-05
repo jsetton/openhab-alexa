@@ -800,6 +800,18 @@ function discoverDevices(token, success, failure) {
                           applianceTypes = ['THERMOSTAT'];
                       }
                       break;
+                  case 'Activity':
+                  case 'ActivityOn':
+                  case 'ActivityOff':
+                      actions = getSceneActions(tag);
+                      applianceTypes = ['ACTIVITY_TRIGGER'];
+                      break;
+                  case 'Scene':
+                  case 'SceneOn':
+                  case 'SceneOff':
+                      actions = getSceneActions(tag);
+                      applianceTypes = ['SCENE_TRIGGER'];
+                      break;
                   default:
                       break;
                   }
@@ -831,6 +843,27 @@ function discoverDevices(token, success, failure) {
     rest.getItems(token, getSuccess, failure);
 }
 
+/**
+* Given a scene tag, returns an array of action that are supported.
+**/
+function getSceneActions(tag) {
+    if (tag.startsWith('Activity') || tag.startsWith('Scene')) {
+        if (tag.endsWith('On')) {
+            return [
+                'turnOn'
+            ];
+        } else if (tag.endsWith('Off')) {
+            return [
+                'turnOff'
+            ];
+        } else {
+            return [
+                'turnOn',
+                'turnOff'
+            ];
+        }
+    }
+}
 /**
 * Given an item, returns an array of action that are supported.
 **/
