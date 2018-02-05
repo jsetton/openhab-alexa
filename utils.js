@@ -21,19 +21,12 @@ function toC(value) {
     return ((value - 32) * 5 / 9).toFixed(2);
 }
 
-function generateControlError(messageId, name, code, description) {
+function generateControlError(messageId, name, payload) {
     var header = {
         namespace: 'Alexa.ConnectedHome.Control',
         name: name,
         payloadVersion: '2',
         messageId: messageId
-    };
-
-    var payload = {
-        exception: {
-            code: code,
-            description: description
-        }
     };
 
     var result = {

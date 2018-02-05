@@ -58,7 +58,10 @@ function postItemCommand(token, itemName, value, success, failure) {
     var req = https.request(options, function (response) {
         var body = '';
         if (response.statusCode == 200 || response.statusCode == 201) {
-            success(response);
+            success({
+                name: itemName,
+                value: value
+            });
         } else {
             failure({
                 message: 'Error response ' + response.statusCode

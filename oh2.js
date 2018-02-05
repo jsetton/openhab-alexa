@@ -52,7 +52,14 @@ exports.handleDiscovery = function (event, context) {
         },
         function (error) {
             log.error("discoverDevices failed: " + error.message);
-            context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+            context.done(
+                null,
+                utils.generateControlError(
+                    event.header.messageId,
+                    'DependentServiceUnavailableError',
+                    {dependentServiceName: error.message}
+                )
+            );
         });
 };
 
@@ -92,6 +99,11 @@ exports.handleControl = function (event, context) {
     case 'SetColorRequest':
         adjustColor(context, event);
         break;
+    case 'SetColorTemperatureRequest':
+    case 'IncrementColorTemperatureRequest':
+    case 'DecrementColorTemperatureRequest':
+        adjustColorTemperature(context, event);
+        break;
     case 'GetLockStateRequest':
         getLockState(context, event);
         break;
@@ -105,7 +117,7 @@ exports.handleControl = function (event, context) {
  * Turns a Switch Item on or off
  */
 function turnOnOff(context, event) {
-    var success = function (response) {
+    var success = function (item) {
         var header = {
             messageId: event.header.messageId,
             name: event.header.name.replace('Request', 'Confirmation'),
@@ -126,7 +138,14 @@ function turnOnOff(context, event) {
     };
 
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
 
     var state = event.header.name === 'TurnOnRequest' ? 'ON' : 'OFF';
@@ -145,7 +164,7 @@ function adjustPercentage(context, event) {
     /**
      * Success functon for sending a percentage change command to OH
      */
-    var itemPostSuccess = function (response) {
+    var itemPostSuccess = function (item) {
 
         var header = {
             messageId: event.header.messageId,
@@ -204,7 +223,14 @@ function adjustPercentage(context, event) {
      * Failure Function used for both retieveing items and posting item commands.
      */
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
 
     if (isSetCommand) {
@@ -212,7 +238,9 @@ function adjustPercentage(context, event) {
     } else if (event.payload.percentageState) {
         rest.getItem(event.payload.accessToken, event.payload.appliance.applianceId, itemGetSuccess, failure);
     } else {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', 'Invalid target percentage.'));
+        failure({
+            message: 'Invalid target percentage.'
+        });
     }
 }
 
@@ -220,7 +248,8 @@ function adjustPercentage(context, event) {
  * Color control
  */
 function adjustColor(context, event) {
-    var success = function (response) {
+
+    var success = function (item) {
         var header = {
             messageId: event.header.messageId,
             name: event.header.name.replace('Request', 'Confirmation'),
@@ -229,9 +258,9 @@ function adjustColor(context, event) {
         };
 
         var payload = {
-          achievedState : {
-            color : event.payload.color
-          }
+            achievedState: {
+                color: event.payload.color
+            }
         };
 
         var result = {
@@ -239,18 +268,117 @@ function adjustColor(context, event) {
             payload: payload
         };
 
+        log.debug('adjustColor done with result: ' + JSON.stringify(result));
         context.succeed(result);
     };
 
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
 
     var h = event.payload.color.hue;
     var s = Math.round(event.payload.color.saturation * 100);
     var b = Math.round(event.payload.color.brightness * 100);
     var state = h + ',' + s + ',' + b;
+
     rest.postItemCommand(event.payload.accessToken, event.payload.appliance.applianceId, state, success, failure);
+}
+
+/**
+ * Color Temperature control
+ */
+function adjustColorTemperature(context, event) {
+
+    var itemConfirmSuccess = function (item) {
+
+        // Fail if state not a number
+        if (isNaN(item.state)) {
+            failure({
+                message: 'Could not get numberic item state'
+            });
+            return;
+        }
+
+        // colorTemperature api property valid range is 1000K to 10000K
+        var value = Math.round((item.state > 10 ? item.state : 10) * 100);
+
+        var header = {
+            messageId: event.header.messageId,
+            name: event.header.name.replace('Request', 'Confirmation'),
+            namespace: event.header.namespace,
+            payloadVersion: event.header.payloadVersion
+        };
+
+        var payload = {
+            achievedState: {
+                colorTemperature: {
+                    value: value
+                }
+            }
+        };
+
+        var result = {
+            header: header,
+            payload: payload
+        };
+
+        log.debug('adjustColorTemperature done with result: ' + JSON.stringify(result));
+        context.succeed(result);
+    }
+
+    var itemPostSuccess = function (item) {
+        rest.getItem(event.payload.accessToken, item.name, itemConfirmSuccess, failure);
+    }
+
+    var itemGetSuccess = function (item) {
+        var command;
+
+        if (event.header.name === 'SetColorTemperatureRequest') {
+            command = Math.round(event.payload.colorTemperature.value / 100).toString();
+            log.debug('adjustColorTemperature to value: ' + command);
+        } else {
+            // Fail if in color mode (event item type = color & empty state)
+            if (event.payload.appliance.additionalApplianceDetails.itemType === 'Color' && !parseInt(item.state)) {
+                failure({
+                    name: 'NotSupportedInCurrentModeError',
+                    payload: {currentDeviceMode: 'COLOR'}
+                });
+                return;
+            }
+            // Fail if state not a number
+            if (isNaN(item.state)) {
+                failure({
+                    message: 'Could not get numberic item state'
+                });
+                return;
+            }
+
+            command = event.header.name === 'IncrementColorTemperatureRequest' ? 'INCREASE' : 'DECREASE';
+            log.debug('adjustColorTemperature send command: ' + command);
+        }
+
+        rest.postItemCommand(event.payload.accessToken, item.name, command, itemPostSuccess, failure);
+    };
+
+    var failure = function (error) {
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                error.name || 'DependentServiceUnavailableError',
+                error.payload || {dependentServiceName: error.message}
+            )
+        );
+    };
+
+    rest.getItem(event.payload.accessToken, event.payload.appliance.additionalApplianceDetails.colorTemperatureId, itemGetSuccess, failure);
 }
 
 /**
@@ -266,7 +394,9 @@ function getCurrentTemperature(context, event) {
         }
 
         if(!item || isNaN(item.state)){
-          context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', 'thermostat missing current temperature'));
+          failure({
+              message: 'thermostat missing current temperature'
+          });
           return;
         }
 
@@ -296,7 +426,14 @@ function getCurrentTemperature(context, event) {
     };
 
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
 
     rest.getItem(event.payload.accessToken, event.payload.appliance.applianceId, success, failure);
@@ -312,7 +449,9 @@ function getTargetTemperature(context, event) {
         var items = getThermostatItems(thermostatGroup.members);
 
         if(!items.targetTemperature || isNaN(items.targetTemperature.state)){
-          context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', 'thermostat missing current temperature'));
+          failure({
+              message: 'thermostat missing current temperature'
+          });
           return;
         }
 
@@ -347,7 +486,14 @@ function getTargetTemperature(context, event) {
     };
 
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
 
     rest.getItem(event.payload.accessToken, event.payload.appliance.applianceId, success, failure);
@@ -358,13 +504,20 @@ function getTargetTemperature(context, event) {
  **/
 function adjustTemperature(context, event) {
 
-    var success = function (response) {
-        var items = getThermostatItems(response.members);
+    var success = function (item) {
+        var items = getThermostatItems(item.members);
         adjustTemperatureWithItems(context, event, items.currentTemperature, items.targetTemperature, items.heatingCoolingMode);
     };
 
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
 
     rest.getItem(event.payload.accessToken, event.payload.appliance.applianceId, success, failure);
@@ -375,7 +528,14 @@ function adjustTemperature(context, event) {
  **/
 function adjustTemperatureWithItems(context, event, currentTemperature, targetTemperature, heatingCoolingMode) {
     if (!targetTemperature) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', 'Missing target temperature!'));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: 'Missing target temperature!'}
+            )
+        );
         return;
     }
 
@@ -403,7 +563,7 @@ function adjustTemperatureWithItems(context, event, currentTemperature, targetTe
 
     var curMode = utils.normalizeThermostatMode(heatingCoolingMode ? heatingCoolingMode.state : 'AUTO');
 
-    var success = function (response) {
+    var success = function (item) {
         var header = {
             messageId: event.header.messageId,
             name: event.header.name.replace('Request', 'Confirmation'),
@@ -438,7 +598,14 @@ function adjustTemperatureWithItems(context, event, currentTemperature, targetTe
     };
 
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', 'Unable to connect to server'));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: 'Unable to connect to server'}
+            )
+        );
     };
 
     rest.postItemCommand(event.payload.accessToken, targetTemperature.name, setValue.toString(), success, failure);
@@ -463,13 +630,20 @@ function getLockState(context, event) {
         context.succeed(result);
     };
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
     rest.getItem(event.payload.accessToken, event.payload.appliance.applianceId, success, failure);
 }
 
 function setLockState(context, event) {
-    var success = function (response) {
+    var success = function (item) {
         var header = {
             messageId: event.header.messageId,
             name: event.header.name.replace('Request', 'Confirmation'),
@@ -491,7 +665,14 @@ function setLockState(context, event) {
     };
 
     var failure = function (error) {
-        context.done(null, utils.generateControlError(event.header.messageId, event.header.name, 'DependentServiceUnavailableError', error.message));
+        context.done(
+            null,
+            utils.generateControlError(
+                event.header.messageId,
+                'DependentServiceUnavailableError',
+                {dependentServiceName: error.message}
+            )
+        );
     };
 
     var state = event.payload.lockState === 'LOCKED' ? 'ON' : 'OFF';
@@ -503,15 +684,6 @@ function setLockState(context, event) {
  * Add all devices that have been tagged
  **/
 function discoverDevices(token, success, failure) {
-
-    //return true if a value in the first group is contained in the second group
-    var matchesGroup = function(groups1, groups2){
-      for(var num in groups1 ){
-        if(groups2.indexOf(groups1[num]) >= 0 )
-          return true;
-      }
-      return false;
-    };
 
     //checks for a Fahrenheit tag and sets the righ property on the
     //additionalApplianceDetails response object
@@ -527,20 +699,17 @@ function discoverDevices(token, success, failure) {
     var getSuccess = function (items) {
         log.debug('discoverDevices getSuccess: ' + JSON.stringify(items));
         var discoverdDevices = [];
-        var thermostatGroups = [];
 
-        //first retrive any thermostat Groups
-        (function () {
-          for (var itemNum in items) {
-            var item = items[itemNum];
-            for (var tagNum in item.tags) {
-              var tag = item.tags[tagNum];
-              if(tag == 'Thermostat' && item.type === 'Group'){
-                thermostatGroups.push(item.name);
+        //return item if tagged item part of groups
+        var findTaggedItemPartOfGroup = function(tag, type, groups) {
+          return items.find(function(item) {
+              if (item.tags.indexOf(tag) > -1 && item.type === type) {
+                  return groups.some(function(group) {
+                    return item.type === 'Group' ? item.name === group : item.groupNames.indexOf(group) > -1;
+                  });
               }
-            }
-          }
-        })();
+          });
+        };
 
         //now retieve all other items
         (function () {
@@ -592,6 +761,16 @@ function discoverDevices(token, success, failure) {
                   case 'Lighting':
                       applianceTypes = ['LIGHT'];
                       actions = getSwitchableActions(item);
+                      //add color temperature actions if item part of group with color tempurature tagged dimmer item
+                      var colorTemperatureItem = findTaggedItemPartOfGroup('ColorTemperature', 'Dimmer', item.groupNames);
+                      if (colorTemperatureItem)  {
+                          additionalApplianceDetails.colorTemperatureId = colorTemperatureItem.name;
+                          actions.push(
+                              'setColorTemperature',
+                              'incrementColorTemperature',
+                              'decrementColorTemperature'
+                          );
+                      }
                       break;
                   case 'Switchable':
                       applianceTypes = ['SWITCH'];
@@ -600,7 +779,7 @@ function discoverDevices(token, success, failure) {
                   case 'CurrentTemperature':
                     //if this is not part of a thermostatGroup then add it
                     //standalone otherwise it will be available as a thermostat
-                    if(!matchesGroup(thermostatGroups, item.groupNames)){
+                    if(!findTaggedItemPartOfGroup('Thermostat', 'Group', item.groupNames)){
                       actions = [
                           'getTemperatureReading'
                       ];
