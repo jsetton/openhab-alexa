@@ -28,6 +28,11 @@ Once you have installed [ASK CLI](https://developer.amazon.com/docs/smapi/quick-
 $ ask init
 ```
 
+For post-deployment AWS resources configuration, you will need to install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) and configure it:
+```
+$ aws configure
+```
+
 By default, the ASK CLI deploys the lambda function in the `us-east-1` region. You will need to change your [default region](https://docs.aws.amazon.com/general/latest/gr/rande.html#lambda_region) based on the skill language you are planning to use. You should refer to the table below, based on the [smart home multi-languages development guidelines](https://developer.amazon.com/docs/smarthome/develop-smart-home-skills-in-multiple-languages.html#deploy):
 
 | Skill Language | Endpoint Region | Lambda Region |
@@ -81,7 +86,16 @@ To configure the server path and credentials, you will need to setup the applica
     [Warn]: Skill api domain "smartHome" can not be enabled. Skipping the enablement.
     ```
 
-3. Setup skill account linking using the skill id displayed in previous step and your OAuth2 provider configuration:
+3. Get the Alexa skill messaging client credentials located under the "Permissions" tab of the skill in your [developer console](https://developer.amazon.com/alexa/console/ask). Add the client id and secret credentials to your `lambda/smarthome/config.js` and force redeploy the lambda function:
+    ```
+    $ ask deploy -t lambda --force
+    Profile for the deployment: [default]
+    Lambda deployment finished.
+    Lambda function(s) updated:
+      [Lambda ARN] <lambdaArn>
+    ```
+
+4. Setup skill account linking using the skill id displayed in previous step and your OAuth2 provider configuration:
     ```
     $ ask api create-account-linking -s <skillId>
     ? Authorization URL:  https://www.amazon.com/ap/oa
@@ -97,7 +111,7 @@ To configure the server path and credentials, you will need to setup the applica
     Account linking created successfully.
     ```
 
-4. Enable skill with account linking:
+5. Enable skill with account linking:
     * Go to your [Alexa skill console](https://alexa.amazon.com/spa/index.html#skills/your-skills/?ref-suffix=ysa_gw)
     * Click on the "openHAB" skill under the "Dev Skills" tab
     * Click "Enable" and go through the account linking process

@@ -17,6 +17,7 @@
 const camelcase = require('camelcase');
 const { sprintf } = require('sprintf-js');
 const rest = require('@lib/rest.js');
+const user = require('@lib/user.js');
 const { RESPONSE_TIMEOUT } = require('./config.js');
 const AlexaPropertyMap = require('./propertyMap.js');
 const AlexaResponse = require('./response.js');
@@ -82,9 +83,60 @@ class AlexaDirective extends AlexaResponse {
     const promises = items.map(item =>
       rest.postItemCommand(this.directive.endpoint.scope.token, item.name, item.state, this.timeout));
     Promise.all(promises).then(() => {
-      this.getPropertiesResponseAndReturn(Object.assign(parameters, {postedItems: items}));
+      Object.assign(parameters, {
+        estimatedDeferralInSeconds: this.propertyMap.getDeferredResponseTime(this.interface),
+        postedItems: items
+      });
+
+      if (parameters.estimatedDeferralInSeconds > 0) {
+        // Asynchronous response
+        this.deferPropertiesResponseAndReturn(items, parameters);
+      } else {
+        // Synchronous response
+        this.getPropertiesResponseAndReturn(parameters);
+      }
     }).catch((error) => {
       this.returnAlexaGenericErrorResponse(error);
+    });
+  }
+
+  /**
+   * Generic method to defer the properties response
+   *  and then return a formatted result to the Alexa event gateway
+   *
+   * @param {Array}  items
+   * @param {Object} parameters     Additional parameters [estimatedDeferralInSeconds] (optional)
+   */
+  deferPropertiesResponseAndReturn(items, parameters = {}) {
+    // Get user access token
+    user.getAccessToken(this.directive.endpoint.scope.token).then((accessToken) => {
+      // Send synchronous deferral response while waiting for the asynchronous properties response
+      const response = {
+        event: {
+          header: this.generateResponseHeader({name: 'DeferredResponse'}),
+          payload: {
+            estimatedDeferralInSeconds: parameters.estimatedDeferralInSeconds
+          }
+        }
+      };
+      this.returnAlexaResponse(response);
+
+      // Store access token in object
+      this.eventGatewayAccessToken = accessToken;
+
+      // Generate list of item names using their item sensor name over standard one, if defined
+      const itemNames = items.map(item => item.sensor || item.name);
+      // Look for posted items state updates in openHAB event stream within deferred response time period
+      rest.pollItemStateEvents(this.directive.endpoint.scope.token,
+        itemNames, parameters.estimatedDeferralInSeconds).then(() => {
+          // Trigger asynchronous properties response
+          this.getPropertiesResponseAndReturn(parameters);
+        }).catch((error) => {
+          this.returnAlexaGenericErrorResponse(error);
+        });
+    }).catch(() => {
+      // Trigger synchronous properties response if no access token found
+      this.getPropertiesResponseAndReturn(parameters);
     });
   }
 

@@ -696,6 +696,26 @@ class AlexaPropertyMap {
   }
 
   /**
+   * Returns deferred response time in seconds for a given interface name
+   *
+   *  Alexa deferred response times out after 8 seconds hard limit,
+   *    except for LockController with soft limit set at 30 seconds (check lambda function timeout value)
+   *
+   * @param  {String} interfaceName
+   * @return {Integer}
+   */
+  getDeferredResponseTime(interfaceName) {
+    const properties = this[interfaceName] || {};
+    const parameter = 'deferredResponse';
+    const maxDelay = interfaceName === 'LockController' ? 30 : 8;
+
+    return Object.keys(properties).reduce((deferredResponseTime, propertyName) => {
+      const delay = Math.min(properties[propertyName].parameters[parameter] || 0, maxDelay);
+      return Math.max(delay, deferredResponseTime);
+    }, 0);
+  }
+
+  /**
    * Returns list of reportable properties for a given list of interface names
    *   based on alexa api interface-specific properties requirements
    *

@@ -1,0 +1,7 @@
+{
+    "Runtime": "nodejs8.10",
+    "Handler": "index.handler",
+    "Description": "openHAB Alexa Smart Home Skill",
+    "Timeout": 45,
+    "MemorySize": 128
+}

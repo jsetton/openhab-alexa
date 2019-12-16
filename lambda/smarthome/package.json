@@ -24,8 +24,10 @@
   },
   "dependencies": {
     "agentkeepalive": "^4.0.2",
+    "aws-sdk": "^2.590.0",
     "camelcase": "^5.0.0",
     "decamelize": "^2.0.0",
+    "eventsource": "^1.0.7",
     "module-alias": "^2.2.0",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",

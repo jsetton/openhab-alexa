@@ -11,6 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
+const user = require('@lib/user.js');
 const AlexaDirective = require('../directive.js');
 
 /**
@@ -22,14 +23,26 @@ class AlexaAuthorization extends AlexaDirective {
    * Grant authorization
    */
   acceptGrant() {
-    // Not supported currently
-    this.returnAlexaErrorResponse({
-      namespace: this.directive.header.namespace,
-      payload: {
-        type: 'ACCEPT_GRANT_FAILED',
-        message: 'Not supported'
-      }
-    });
+    if (this.directive.payload.grant.type === 'OAuth2.AuthorizationCode') {
+      user.grantAuthorization(this.directive.payload.grant.code, this.directive.payload.grantee.token).then(() => {
+        const response = this.generateResponse({
+          header: {
+            namespace: this.directive.header.namespace,
+            name: 'AcceptGrant.Response'
+          }
+        });
+        this.returnAlexaResponse(response);
+      }).catch((error) => {
+        this.returnAlexaErrorResponse({
+          error: error,
+          namespace: this.directive.header.namespace,
+          payload: {
+            type: 'ACCEPT_GRANT_FAILED',
+            message: error.message
+          }
+        });
+      });
+    }
   }
 }
 

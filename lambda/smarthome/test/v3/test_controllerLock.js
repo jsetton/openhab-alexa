@@ -138,5 +138,61 @@ module.exports = [
         {"name": "doorLock", "value": "ON"}
       ]
     }
+  },
+  {
+    description: "lock deferred response request with sensor item",
+    directive: {
+      "header": {
+        "namespace": "Alexa.LockController",
+        "name": "Lock"
+      },
+      "endpoint": {
+        "endpointId": "doorLock",
+        "cookie": {
+          "propertyMap": JSON.stringify({
+            "LockController": {"lockState": {
+                "parameters": {"deferredResponse": 3},
+                "item": {"name": "doorLock", "sensor": "doorLockSensor", "type": "Switch"},
+                "schema": {"name": "lockState"}}}
+          })
+        }
+      }
+    },
+    mocked: {
+      openhab: {"name": "doorLockSensor", "state": "CLOSED", "type": "Contact"}
+    },
+    expected: {
+      alexa: [
+        {
+          "event": {
+            "header": {
+              "namespace": "Alexa",
+              "name": "DeferredResponse"
+            },
+            "payload": {
+              "estimatedDeferralInSeconds": 3
+            }
+          }
+        },
+        {
+          "context": {
+            "properties": [{
+              "namespace": "Alexa.LockController",
+              "name": "lockState",
+              "value": "LOCKED"
+            }]
+          },
+          "event": {
+            "header": {
+              "namespace": "Alexa",
+              "name": "Response"
+            }
+          }
+        }
+      ],
+      openhab: [
+        {"name": "doorLock", "value": "ON"}
+      ]
+    }
   }
 ];

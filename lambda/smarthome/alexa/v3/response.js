@@ -16,6 +16,8 @@
  */
 const uuid = require('uuid/v4');
 const log = require('@lib/log.js');
+const rest = require('@lib/rest.js');
+const user = require('@lib/user.js');
 const { RESPONSE_TIMEOUT } = require('./config');
 
 /**
@@ -84,8 +86,18 @@ class AlexaResponse {
    * @param  {Object} response
    */
   returnAlexaResponse(response) {
-    // Send response once, otherwise discard subsequent calls
-    if (!this.called) {
+    // Send asynchronous response if event gateway access token defined,
+    //  otherwise send synchronous response using Lambda callback function, if not already called
+    if (this.eventGatewayAccessToken) {
+      log.info('Asynchronous response:', response);
+      // Send message to Alexa Event Gateway
+      rest.postMessageEventGateway(this.eventGatewayAccessToken, response).catch((error) => {
+        log.error('Failed to send message to Alexa event gateway.');
+        log.debug('Error:', error);
+        // Handle user access errors
+        user.handleAccessError(this.directive.endpoint.scope.token, error);
+      });
+    } else if (!this.called) {
       log.info('Response:', response);
       // Stop response timeout timer
       clearTimeout(this.timer);

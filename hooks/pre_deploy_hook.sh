@@ -25,6 +25,11 @@ install_dependencies() {
     return $?
 }
 
+update_aws_resources() {
+    node ./tools/updateAWSResources.js >/dev/null 2>&1
+    return $?
+}
+
 update_skill_catalog() {
     node ./tools/updateSkillCatalog.js >/dev/null 2>&1
     return $?
@@ -65,6 +70,12 @@ if [[ $TARGET == "all" || $TARGET == "lambda" ]]; then
     else
         echo "There was a problem updating the skill manifest."
         exit 1
+    fi
+    if update_aws_resources; then
+        echo "AWS resources updated successfully."
+    else
+      echo "There was a problem updating the AWS resources."
+      exit 1
     fi
     echo "###########################"
 fi

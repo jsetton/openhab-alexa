@@ -20,6 +20,7 @@ The skill connects your openHAB setup through the [myopenHAB.org](http://myopenH
     * [Group Endpoint](#group-endpoint)
     * [Building Block APIs](#building-block-apis)
     * [Semantic Extensions](#semantic-extensions)
+    * [Item Deferred Response](#item-deferred-response)
     * [Item Sensor](#item-sensor)
     * [Item State](#item-state)
     * [Item Unit of Measurement](#item-unit-of-measurement)
@@ -239,6 +240,16 @@ A door with toggle interface capability (Metadata label: [`Door`](#door)). For e
 
 ```
 Switch Door "Door" {alexa="ToggleController.toggleState" [category="DOOR", friendlyNames="@Setting.Opening", actionMappings="Close=OFF,Open=ON", stateMappings="Closed=OFF,Open=ON"]}
+```
+
+#### Item Deferred Response
+Certain devices such as locks may need extra time to complete requested command and report its status. You can configure an item with that feature by using the  metadata parameter `deferredResponse=<timeInSeconds>`. It will delay Alexa response by a specified time in seconds. The maximum time for LockController devices is 30 seconds while 8 seconds for all other capabilities. This feature can be used in combination with an [item sensor](#item-sensor).
+
+Below is an example of a lock device using an item sensor with a 20 seconds maximum delay.
+
+```
+Switch LockControl "Lock" {alexa="LockController.lockState" [deferredResponse=20,itemSensor="LockStatus"]}
+Contact LockStatus "Status"
 ```
 
 ### Item Sensor
