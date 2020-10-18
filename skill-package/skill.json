@@ -25,13 +25,7 @@
     },
     "permissions": [],
     "apis": {
-      "smartHome": {
-        "endpoint": {
-          "uri": "alexa-openhab",
-          "sourceDir": "lambda/smarthome"
-        },
-        "protocolVersion": "3"
-      }
+      "smartHome": {}
     }
   }
 }

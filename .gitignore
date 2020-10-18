@@ -1,5 +1,6 @@
-/lambda/*/catalog.json
-/lambda/*/config.js
+.ask/lambda
+lambda/smarthome/catalog.json
+lambda/smarthome/config.js
 ssl/
 .vscode
 

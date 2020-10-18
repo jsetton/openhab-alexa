@@ -17,7 +17,7 @@ const fs = require('fs');
  * Skill schema path
  * @type {String}
  */
-const SKILL_SCHEMA_PATH = '../skill.json';
+const SKILL_SCHEMA_PATH = '../skill-package/skill.json';
 
 /**
  * Resources path
@@ -80,10 +80,10 @@ function loadLocaleResources(schema) {
  */
 function setEnvironmentSettings(schema) {
   // Set api function name if specified
-  schema.manifest.apis.smartHome.endpoint.uri = process.env.ASK_FUNCTION_NAME || 'alexa-openhab';
+  // schema.manifest.apis.smartHome.endpoint.uri = process.env.ASK_FUNCTION_NAME || 'alexa-openhab';
   // Set api regional endpoints for production deployment
-  schema.manifest.apis.smartHome.regions = process.env.ASK_ENV !== 'production' ? undefined : REGIONS.reduce(
-    (regions, region) => Object.assign(regions, {[region]: {endpoint: schema.manifest.apis.smartHome.endpoint}}), {});
+  // schema.manifest.apis.smartHome.regions = process.env.ASK_ENV !== 'production' ? undefined : REGIONS.reduce(
+    // (regions, region) => Object.assign(regions, {[region]: {endpoint: schema.manifest.apis.smartHome.endpoint}}), {});
   // Set publishing distribution mode based on deployment environment
   schema.manifest.publishingInformation.distributionMode = process.env.ASK_ENV !== 'production' ? 'PRIVATE' : 'PUBLIC';
 }

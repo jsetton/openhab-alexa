@@ -17,7 +17,7 @@ const fs = require('fs');
  * Catalog schema path
  * @type {String}
  */
-const CATALOG_SCHEMA_PATH = '../lambda/smarthome/catalog.json';
+const CATALOG_SCHEMA_PATH = '../.ask/lambda/smarthome/catalog.json';
 
 /**
  * Resources path

@@ -1,4 +1,4 @@
-# Amazon Alexa Smart Home skill for openHAB 2
+# openHAB Amazon Alexa Smart Home Skill
 
 [![Build Status](https://github.com/openhab/openhab-alexa/workflows/build/badge.svg?branch=master)](https://github.com/openhab/openhab-alexa/actions?query=workflow%3Abuild)
 [![Crowdin](https://badges.crowdin.net/openhab-alexa/localized.svg)](https://crowdin.com/project/openhab-alexa)
