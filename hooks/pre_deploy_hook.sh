@@ -25,16 +25,6 @@ install_dependencies() {
     return $?
 }
 
-update_skill_catalog() {
-    node ./tools/updateSkillCatalog.js >/dev/null 2>&1
-    return $?
-}
-
-update_skill_manifest() {
-    node ./tools/updateSkillManifest.js >/dev/null 2>&1
-    return $?
-}
-
 echo "###########################"
 echo "##### pre-deploy hook #####"
 echo "###########################"
@@ -54,18 +44,6 @@ if [[ $TARGET == "all" || $TARGET == "lambda" ]]; then
             exit 1
         fi
     done
-    if update_skill_catalog; then
-        echo "Skill catalog updated successfully."
-    else
-        echo "There was a problem updating the skill catalog."
-        exit 1
-    fi
-    if update_skill_manifest; then
-        echo "Skill manifest updated successfully."
-    else
-        echo "There was a problem updating the skill manifest."
-        exit 1
-    fi
     echo "###########################"
 fi
 

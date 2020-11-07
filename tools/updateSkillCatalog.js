@@ -69,7 +69,7 @@ function saveCatalogSchema(schema) {
   try {
     fs.writeFileSync(CATALOG_SCHEMA_PATH, JSON.stringify(schema, null, 2));
   } catch (e) {
-    console.log(`Failed to save skill schema: ${CATALOG_SCHEMA_PATH}`);
+    console.log(`Failed to save catalog schema: ${CATALOG_SCHEMA_PATH}`);
     throw e;
   }
 }

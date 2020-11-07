@@ -1,0 +1,66 @@
+{
+  "assetIds": {
+    "Setting.Humidity": [
+      {
+        "text": "Luftfeuchtigkeit",
+        "locale": "de-DE"
+      },
+      {
+        "text": "Humidity",
+        "locale": "en-AU"
+      },
+      {
+        "text": "Humidity",
+        "locale": "en-CA"
+      },
+      {
+        "text": "Humidity",
+        "locale": "en-GB"
+      },
+      {
+        "text": "Humidity",
+        "locale": "en-IN"
+      },
+      {
+        "text": "Humidity",
+        "locale": "en-US"
+      },
+      {
+        "text": "Humedad",
+        "locale": "es-ES"
+      },
+      {
+        "text": "Humedad",
+        "locale": "es-MX"
+      },
+      {
+        "text": "Humedad",
+        "locale": "es-US"
+      },
+      {
+        "text": "Humidité",
+        "locale": "fr-CA"
+      },
+      {
+        "text": "Humidité",
+        "locale": "fr-FR"
+      },
+      {
+        "text": "आर्द्रता",
+        "locale": "hi-IN"
+      },
+      {
+        "text": "Umidità",
+        "locale": "it-IT"
+      },
+      {
+        "text": "湿度",
+        "locale": "ja-JP"
+      },
+      {
+        "text": "Umidade",
+        "locale": "pt-BR"
+      }
+    ]
+  }
+}
