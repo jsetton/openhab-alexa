@@ -12,7 +12,8 @@
  */
 
 import log from './log.js';
-import { handleRequest } from './alexa/smarthome/index.js';
+import { handleSmarthomeRequest } from './alexa/smarthome/index.js';
+import { handleApiRequest } from './api/index.js';
 
 /**
  * Defines skill event handler
@@ -20,11 +21,20 @@ import { handleRequest } from './alexa/smarthome/index.js';
  * @return {Promise}
  */
 export const handler = async (event) => {
+  let response;
+
   log.info('Received event:', event);
 
   if (event.directive?.header.payloadVersion === '3') {
-    return handleRequest(event);
+    response = await handleSmarthomeRequest(event);
+  } else if (event.routeKey) {
+    response = await handleApiRequest(event);
+  } else {
+    log.warn('Unsupported event:', event);
   }
 
-  log.warn('Unsupported event:', event);
+  if (response) {
+    log.info('Response:', response);
+    return response;
+  }
 };

@@ -13,23 +13,63 @@
 
 export default [
   {
-    description: 'grant authorization not supported',
-    directive: {
-      header: {
-        namespace: 'Alexa.Authorization',
-        name: 'AcceptGrant'
-      },
-      payload: {
-        grant: {
-          type: 'OAuth2.AuthorizationCode',
-          code: 'auth-code'
-        },
-        grantee: {
-          type: 'BearerToken',
-          token: 'access-token-from-skill'
-        }
+    description: 'grant authorization',
+    credentials: {
+      access_token: 'foo',
+      refresh_token: 'bar',
+      token_type: 'bearer',
+      expires_in: 42
+    },
+    settings: {
+      runtime: {
+        uuid: 'fb86a2e5-a4ff-4175-ab37-0f85b44d57e1'
       }
     },
+    expected: {
+      alexa: {
+        event: {
+          header: {
+            namespace: 'Alexa.Authorization',
+            name: 'AcceptGrant.Response'
+          },
+          payload: {}
+        }
+      },
+      db: [
+        {
+          userId: 'fb86a2e5-a4ff-4175-ab37-0f85b44d57e1',
+          refreshToken: 'bar'
+        }
+      ]
+    }
+  },
+  {
+    description: 'grant authorization no uuid',
+    settings: {
+      runtime: {
+        uuid: undefined
+      }
+    },
+    expected: {
+      alexa: {
+        event: {
+          header: {
+            namespace: 'Alexa.Authorization',
+            name: 'AcceptGrant.Response'
+          },
+          payload: {}
+        }
+      }
+    }
+  },
+  {
+    description: 'grant authorization failed error',
+    settings: {
+      runtime: {
+        uuid: 'fb86a2e5-a4ff-4175-ab37-0f85b44d57e1'
+      }
+    },
+    error: new Error('Failed to get credentials'),
     expected: {
       alexa: {
         event: {
@@ -39,7 +79,7 @@ export default [
           },
           payload: {
             type: 'ACCEPT_GRANT_FAILED',
-            message: 'Not supported'
+            message: 'Failed to obtain and store user credentials'
           }
         }
       }

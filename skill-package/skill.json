@@ -547,7 +547,11 @@
         }
       }
     },
-    "permissions": [],
+    "permissions": [
+      {
+        "name": "alexa::async_event:write"
+      }
+    ],
     "apis": {
       "smartHome": {}
     }
