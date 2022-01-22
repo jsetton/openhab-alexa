@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import axios from 'axios';
 import { HttpsAgent } from 'agentkeepalive';
 import { validate as uuidValidate } from 'uuid';
+import config from '#root/config.js';
 import { ItemType, ItemValue, UnitSymbol } from './constants.js';
 
 /**
@@ -30,12 +31,11 @@ export default class OpenHAB {
 
   /**
    * Constructor
-   * @param {Object} config
    * @param {String} token
    * @param {Number} timeout
    */
-  constructor(config, token, timeout) {
-    this._client = OpenHAB.createClient(config, token, timeout);
+  constructor(token, timeout) {
+    this._client = OpenHAB.createClient(config.openhab, token, timeout);
   }
 
   /**
@@ -203,6 +203,21 @@ export default class OpenHAB {
   }
 
   /**
+   * Sends an alexa smarthome directive to binding
+   * @param  {Object}  request
+   * @return {Promise}
+   */
+  sendAlexaDirective(request) {
+    const options = {
+      method: 'POST',
+      url: '/alexa/smarthome',
+      data: request,
+      resolveWithFullResponse: true
+    };
+    return this._client(options);
+  }
+
+  /**
    * Returns request client
    * @param  {Object} config
    * @param  {String} token
@@ -211,7 +226,7 @@ export default class OpenHAB {
    */
   static createClient(config, token, timeout) {
     const client = axios.create({
-      baseURL: config.baseURL,
+      baseURL: config.baseUrl,
       headers: {
         common: {
           'Cache-Control': 'no-cache'
@@ -221,7 +236,8 @@ export default class OpenHAB {
         // Set keep-alive free socket to timeout after 45s of inactivity
         freeSocketTimeout: 45000,
         timeout: parseInt(timeout)
-      })
+      }),
+      resolveWithFullResponse: false
     });
 
     // Add authentication options
@@ -238,7 +254,9 @@ export default class OpenHAB {
     }
 
     // Set response interceptor
-    client.interceptors.response.use((response) => response.data);
+    client.interceptors.response.use((response) =>
+      response.config.resolveWithFullResponse ? response : response.data
+    );
 
     return client;
   }

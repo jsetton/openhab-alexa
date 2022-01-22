@@ -12,9 +12,9 @@
  */
 
 import { AxiosError } from 'axios';
-import config from '#root/config.js';
 import log from '#root/log.js';
 import OpenHAB from '#openhab/index.js';
+import AlexaBinding from './binding.js';
 import AlexaDirective from './directive.js';
 import AlexaResponse from './response.js';
 import { AlexaError, InvalidDirectiveError } from './errors.js';
@@ -24,35 +24,40 @@ import { AlexaError, InvalidDirectiveError } from './errors.js';
  * @param  {Object}  request
  * @return {Promise}
  */
-export const handleRequest = async (request) => {
+export const handleSmarthomeRequest = async (request) => {
   // Initialize directive object
   const directive = new AlexaDirective(request.directive);
   // Initialize openhab object
-  const openhab = new OpenHAB(config.openhab, directive.auth.token, AlexaResponse.TIMEOUT);
+  const openhab = new OpenHAB(directive.auth.token, AlexaResponse.TIMEOUT);
 
   let response;
 
   try {
-    // Get directive handler function
-    const handler = directive.getHandler();
+    if (!directive.isBindingEnabled) {
+      // Get directive handler function
+      const handler = directive.getHandler();
 
-    // Throw invalid directive error if handler function not defined
-    if (typeof handler !== 'function') {
-      throw new InvalidDirectiveError(`Unsupported directive ${directive.namespace}/${directive.name}`);
-    }
+      // Throw invalid directive error if handler function not defined
+      if (typeof handler !== 'function') {
+        throw new InvalidDirectiveError(`Unsupported directive ${directive.namespace}/${directive.name}`);
+      }
 
-    // Load endpoint if present in directive
-    if (directive.hasEndpoint) {
-      directive.loadEndpoint();
-    }
+      // Load endpoint if present in directive
+      if (directive.hasEndpoint) {
+        directive.loadEndpoint();
+      }
 
-    // Get alexa response from handler function
-    response = await handler(directive, openhab);
+      // Get alexa response from handler function
+      response = await handler(directive, openhab);
 
-    // Add response context properties if directive has endpoint
-    if (directive.hasEndpoint) {
-      const properties = await directive.endpoint.getContextProperties(openhab);
-      response.setContextProperties(properties);
+      // Add response context properties if directive has endpoint
+      if (directive.hasEndpoint) {
+        const properties = await directive.endpoint.getContextProperties(openhab);
+        response.setContextProperties(properties);
+      }
+    } else {
+      // Send directive to binding
+      response = await AlexaBinding.handleDirective(directive, openhab);
     }
   } catch (error) {
     // Log error if not alexa error
@@ -64,10 +69,10 @@ export const handleRequest = async (request) => {
     response = directive.error(error instanceof AlexaError ? error : AlexaError.from(error));
   }
 
-  // Log response object
-  log.info('Response:', response.toJSON());
-  // Return response object
-  return response.toJSON();
+  // Return serialized response object if defined
+  if (typeof response !== 'undefined') {
+    return response.toJSON();
+  }
 };
 
 /**
@@ -89,6 +94,6 @@ const logError = (error, directive) => {
 
   // Log error object in debug channel
   log.debug('Error:', error);
-  // Log error message in defined log level channel with directive object essential properties
-  log[level](message, { directive: directive.toJSON() });
+  // Log error message in defined log level channel with formatted directive log properties
+  log[level](message, { directive: directive.getLogProperties() });
 };

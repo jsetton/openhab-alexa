@@ -17,14 +17,18 @@ import esmock from 'esmock';
 import log from '#root/log.js';
 
 describe('Skill Event Tests', function () {
-  let smarthomeStub, skill;
+  let apiStub, smarthomeStub, skill;
 
   beforeEach(async function () {
     // set stub environment
+    apiStub = sinon.stub();
     smarthomeStub = sinon.stub();
     skill = await esmock('#root/index.js', {
+      '#root/api/index.js': {
+        handleApiRequest: apiStub
+      },
       '#alexa/smarthome/index.js': {
-        handleRequest: smarthomeStub
+        handleSmarthomeRequest: smarthomeStub
       }
     });
   });
@@ -32,6 +36,19 @@ describe('Skill Event Tests', function () {
   afterEach(function () {
     // restore stub environment
     sinon.restore();
+  });
+
+  describe('api', function () {
+    it('route key', async function () {
+      // set environment
+      const event = { routeKey: 'GET /foobar' };
+      apiStub.resolves({ statusCode: 501 });
+      // run test
+      await skill.handler(event);
+      expect(apiStub.called).to.be.true;
+      expect(apiStub.firstCall.args).to.deep.equal([event]);
+      expect(smarthomeStub.called).to.be.false;
+    });
   });
 
   describe('smarthome', function () {
@@ -48,6 +65,7 @@ describe('Skill Event Tests', function () {
       };
       // run test
       await skill.handler(event);
+      expect(apiStub.called).to.be.false;
       expect(smarthomeStub.called).to.be.true;
       expect(smarthomeStub.firstCall.args).to.deep.equal([event]);
     });
@@ -64,6 +82,7 @@ describe('Skill Event Tests', function () {
       const logWarn = sinon.stub(log, 'warn');
       // run test
       await skill.handler(event);
+      expect(apiStub.called).to.be.false;
       expect(smarthomeStub.called).to.be.false;
       expect(logWarn.called).to.be.true;
       expect(logWarn.firstCall.args).to.deep.equal(['Unsupported event:', event]);

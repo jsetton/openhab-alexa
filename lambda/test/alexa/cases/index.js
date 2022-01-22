@@ -14,6 +14,7 @@
 import alexTest from './alexa.test.js';
 import authorizationTest from './authorization.test.js';
 import brightnessControllerTest from './brightnessController.test.js';
+import bindingTest from './binding.test.js';
 import cameraStreamControllerTest from './cameraStreamController.test.js';
 import channelControllerTest from './channelController.test.js';
 import colorControllerTest from './colorController.test.js';
@@ -93,6 +94,7 @@ import toggleControllerTest from './toggleController.test.js';
 export default {
   Alexa: [alexTest],
   Authorization: [authorizationTest],
+  Binding: [bindingTest],
   BrightnessController: [brightnessControllerTest],
   CameraStreamController: [cameraStreamControllerTest],
   ChannelController: [channelControllerTest],
