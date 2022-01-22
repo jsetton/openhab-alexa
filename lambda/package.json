@@ -27,6 +27,8 @@
     "test:coverage": "c8 npm test"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.716.0",
+    "@aws-sdk/lib-dynamodb": "^3.716.0",
     "agentkeepalive": "^4.5.0",
     "axios": "^1.7.9",
     "uuid": "^11.0.3",

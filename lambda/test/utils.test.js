@@ -12,7 +12,15 @@
  */
 
 import { expect } from 'chai';
-import { clamp, compressJSON, decompressJSON, decamelize, parseUrl, stripPunctuation } from '#root/utils.js';
+import {
+  clamp,
+  compareVersion,
+  compressJSON,
+  decompressJSON,
+  decamelize,
+  parseUrl,
+  stripPunctuation
+} from '#root/utils.js';
 
 describe('Utilities Tests', function () {
   describe('clamp', function () {
@@ -26,6 +34,32 @@ describe('Utilities Tests', function () {
 
     it('above range', function () {
       expect(clamp(142, 0, 100)).to.equal(100);
+    });
+  });
+
+  describe('compare version', function () {
+    it('equal with same size', function () {
+      expect(compareVersion('3.1.0', '3.1.0')).to.equal(0);
+    });
+
+    it('equal with different size', function () {
+      expect(compareVersion('3', '3.1.0')).to.equal(0);
+    });
+
+    it('lower than', function () {
+      expect(compareVersion('3.1.0', '3.2.0')).to.equal(-1);
+    });
+
+    it('greater than', function () {
+      expect(compareVersion('3.1.0', '3.0.0')).to.equal(1);
+    });
+
+    it('invalid format', function () {
+      try {
+        compareVersion('foo', 'bar');
+      } catch (error) {
+        expect(error).to.be.instanceof(TypeError).and.include({ message: 'Invalid formatted version' });
+      }
     });
   });
 

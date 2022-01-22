@@ -25,6 +25,24 @@ export const clamp = (value, minValue, maxValue) => {
 };
 
 /**
+ * Returns number representing the difference between two string-based versions
+ * @param  {String} versionA
+ * @param  {String} versionB
+ * @return {Number}
+ */
+export const compareVersion = (versionA, versionB) => {
+  const a = versionA.split('.', 3).map(Number);
+  const b = versionB.split('.', 3).map(Number);
+
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (isNaN(a[i]) || isNaN(b[i])) throw new TypeError('Invalid formatted version');
+    if (a[i] > b[i]) return 1;
+    if (a[i] < b[i]) return -1;
+  }
+  return 0;
+};
+
+/**
  * Returns compressed json string
  * @param  {Object} object
  * @return {String}

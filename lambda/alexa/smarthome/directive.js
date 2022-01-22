@@ -86,6 +86,14 @@ export default class AlexaDirective {
   }
 
   /**
+   *  Returns if is binding enabled
+   * @return {Boolean}
+   */
+  get isBindingEnabled() {
+    return this.hasEndpoint && this._directive.endpoint.cookie && this._directive.endpoint.cookie.binding === true;
+  }
+
+  /**
    * Returns handler function
    * @return {Function}
    */
@@ -139,10 +147,10 @@ export default class AlexaDirective {
   }
 
   /**
-   * Returns serialized directive object essential properties
+   * Returns formatted directive log properties
    * @return {Object}
    */
-  toJSON() {
+  getLogProperties() {
     return {
       namespace: this.namespace,
       ...(this.instance && { instance: this.instance }),
@@ -157,5 +165,13 @@ export default class AlexaDirective {
       }),
       token: this.auth.token
     };
+  }
+
+  /**
+   * Returns serialized directive object
+   * @return {Object}
+   */
+  toJSON() {
+    return this._directive;
   }
 }

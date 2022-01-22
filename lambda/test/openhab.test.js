@@ -24,7 +24,7 @@ const packageInfo = JSON.parse(fs.readFileSync('./package.json'));
 
 describe('OpenHAB Tests', function () {
   // set default environment
-  const baseURL = 'https://foobar';
+  const baseUrl = 'https://foobar';
   const requestId = 'request-id';
   const token = 'token';
   const timeout = 42;
@@ -33,7 +33,7 @@ describe('OpenHAB Tests', function () {
 
   beforeEach(function () {
     // set stub environment
-    sinon.stub(config.openhab, 'baseURL').value(baseURL);
+    sinon.stub(config.openhab, 'baseUrl').value(baseUrl);
     // create new openhab instance
     openhab = new OpenHAB(requestId, token, timeout);
   });
@@ -49,7 +49,7 @@ describe('OpenHAB Tests', function () {
     it('https oauth2 token', async function () {
       // set environment
       sinon.stub(fs, 'existsSync').returns(false);
-      nock(baseURL)
+      nock(baseUrl)
         .get('/')
         .matchHeader('Authorization', `Bearer ${token}`)
         .reply(200)
@@ -61,7 +61,7 @@ describe('OpenHAB Tests', function () {
           });
         });
       // run test
-      await OpenHAB.createClient({ baseURL }, requestId, token, timeout).get('/');
+      await OpenHAB.createClient({ baseUrl }, requestId, token, timeout).get('/');
       expect(nock.isDone()).to.be.true;
     });
 
@@ -71,7 +71,7 @@ describe('OpenHAB Tests', function () {
       const pass = 'password';
       const token = Buffer.from(`${user}:${pass}`).toString('base64');
       sinon.stub(fs, 'existsSync').returns(false);
-      nock(baseURL)
+      nock(baseUrl)
         .get('/')
         .basicAuth({ user, pass })
         .reply(200)
@@ -79,7 +79,7 @@ describe('OpenHAB Tests', function () {
           expect(headers).to.include({ authorization: `Basic ${token}` });
         });
       // run test
-      await OpenHAB.createClient({ baseURL, user, pass }, requestId, token, timeout).get('/');
+      await OpenHAB.createClient({ baseUrl, user, pass }, requestId, token, timeout).get('/');
       expect(nock.isDone()).to.be.true;
     });
 
@@ -90,7 +90,7 @@ describe('OpenHAB Tests', function () {
       const certPass = 'passphrase';
       sinon.stub(fs, 'existsSync').withArgs(certFile).returns(true);
       sinon.stub(fs, 'readFileSync').withArgs(certFile).returns(certData);
-      nock(baseURL)
+      nock(baseUrl)
         .get('/')
         .reply(200)
         .on('request', ({ headers, options, socket }) => {
@@ -99,21 +99,21 @@ describe('OpenHAB Tests', function () {
           expect(socket).to.include({ timeout });
         });
       // run test
-      await OpenHAB.createClient({ baseURL, certFile, certPass }, requestId, token, timeout).get('/');
+      await OpenHAB.createClient({ baseUrl, certFile, certPass }, requestId, token, timeout).get('/');
       expect(nock.isDone()).to.be.true;
     });
 
     it('https no auth', async function () {
       // set environment
       sinon.stub(fs, 'existsSync').returns(false);
-      nock(baseURL)
+      nock(baseUrl)
         .get('/')
         .reply(200)
         .on('request', ({ headers }) => {
           expect(headers).to.not.have.property('authorization');
         });
       // run test
-      await OpenHAB.createClient({ baseURL }).get('/');
+      await OpenHAB.createClient({ baseUrl }).get('/');
       expect(nock.isDone()).to.be.true;
     });
   });
@@ -121,7 +121,7 @@ describe('OpenHAB Tests', function () {
   describe('get item state', function () {
     it('defined state', async function () {
       // set environment
-      nock(baseURL).get('/rest/items/foo').reply(200, { name: 'foo', state: '42', type: 'Dimmer' });
+      nock(baseUrl).get('/rest/items/foo').reply(200, { name: 'foo', state: '42', type: 'Dimmer' });
       // run test
       expect(await openhab.getItemState('foo')).to.equal('42');
       expect(nock.isDone()).to.be.true;
@@ -129,7 +129,7 @@ describe('OpenHAB Tests', function () {
 
     it('defined state with state description but no pattern', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         .get('/rest/items/foo')
         .reply(200, { name: 'foo', state: '42', stateDescription: {}, type: 'Dimmer' });
       // run test
@@ -139,7 +139,7 @@ describe('OpenHAB Tests', function () {
 
     it('undefined state', async function () {
       // set environment
-      nock(baseURL).get('/rest/items/foo').reply(200, { name: 'foo', state: 'NULL', type: 'Dimmer' });
+      nock(baseUrl).get('/rest/items/foo').reply(200, { name: 'foo', state: 'NULL', type: 'Dimmer' });
       // run test
       expect(await openhab.getItemState('foo')).to.be.undefined;
       expect(nock.isDone()).to.be.true;
@@ -147,7 +147,7 @@ describe('OpenHAB Tests', function () {
 
     it('dimmer state with pattern', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         .get('/rest/items/foo')
         .reply(200, {
           name: 'foo',
@@ -162,7 +162,7 @@ describe('OpenHAB Tests', function () {
 
     it('number dimensionless group state with pattern', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         .get('/rest/items/foo')
         .reply(200, {
           name: 'foo',
@@ -178,7 +178,7 @@ describe('OpenHAB Tests', function () {
 
     it('rollershutter state with pattern', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         .get('/rest/items/foo')
         .reply(200, {
           name: 'foo',
@@ -193,7 +193,7 @@ describe('OpenHAB Tests', function () {
 
     it('string state with no state description', async function () {
       // set environment
-      nock(baseURL).get('/rest/items/foo').reply(200, { name: 'foo', state: 'bar', type: 'String' });
+      nock(baseUrl).get('/rest/items/foo').reply(200, { name: 'foo', state: 'bar', type: 'String' });
       // run test
       expect(await openhab.getItemState('foo')).to.equal('bar');
       expect(nock.isDone()).to.be.true;
@@ -201,7 +201,7 @@ describe('OpenHAB Tests', function () {
 
     it('item not found error', async function () {
       // set environment
-      nock(baseURL).get('/rest/items/foo').reply(404);
+      nock(baseUrl).get('/rest/items/foo').reply(404);
       // run test
       try {
         await openhab.getItemState('foo');
@@ -225,7 +225,7 @@ describe('OpenHAB Tests', function () {
         { name: 'foo', type: 'Dimmer' },
         { name: 'bar', type: 'Switch' }
       ];
-      nock(baseURL).get('/rest/items').query(qs).reply(200, items);
+      nock(baseUrl).get('/rest/items').query(qs).reply(200, items);
       // run test
       expect(await openhab.getAllItems()).to.deep.equal(items);
       expect(nock.isDone()).to.be.true;
@@ -233,7 +233,7 @@ describe('OpenHAB Tests', function () {
 
     it('type error', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         .get('/rest/items')
         .query(qs)
         .reply(200, 'invalid 1')
@@ -256,7 +256,7 @@ describe('OpenHAB Tests', function () {
 
     it('unauthorized error', async function () {
       // set environment
-      nock(baseURL).get('/rest/items').query(qs).reply(401);
+      nock(baseUrl).get('/rest/items').query(qs).reply(401);
       // run test
       try {
         await openhab.getAllItems();
@@ -282,7 +282,7 @@ describe('OpenHAB Tests', function () {
 
     it('oh2.4', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         // root resource
         .get('/rest/')
         .reply(200, { version: '2' })
@@ -302,7 +302,7 @@ describe('OpenHAB Tests', function () {
 
     it('oh2.5', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         // root resource
         .get('/rest/')
         .reply(200, { version: '3' })
@@ -322,7 +322,7 @@ describe('OpenHAB Tests', function () {
 
     it('oh3.x', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         // root resource
         .get('/rest/')
         .reply(200, { version: '4', locale, measurementSystem, runtimeInfo: { version: '3.0.0' } })
@@ -339,7 +339,7 @@ describe('OpenHAB Tests', function () {
 
     it('oh3.x with invalid uuid', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         // root resource
         .get('/rest/')
         .reply(200, { version: '4', locale, measurementSystem, runtimeInfo: { version: '3.0.0' } })
@@ -356,7 +356,7 @@ describe('OpenHAB Tests', function () {
 
     it('oh3.x with unauthorized uuid', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         // root resource
         .get('/rest/')
         .reply(200, { version: '4', locale, measurementSystem, runtimeInfo: { version: '3.0.0' } })
@@ -373,7 +373,7 @@ describe('OpenHAB Tests', function () {
 
     it('undefined root resource', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         // root resource
         .get('/rest/')
         .reply(200)
@@ -387,7 +387,7 @@ describe('OpenHAB Tests', function () {
 
     it('request error', async function () {
       // set environment
-      nock(baseURL)
+      nock(baseUrl)
         // root resource
         .get('/rest/')
         .replyWithError('error');
@@ -404,7 +404,7 @@ describe('OpenHAB Tests', function () {
   describe('send item command', function () {
     it('successful', async function () {
       // set environment
-      nock(baseURL).post('/rest/items/foo', '42').reply(200);
+      nock(baseUrl).post('/rest/items/foo', '42').reply(200);
       // run test
       await openhab.sendCommand('foo', 42);
       expect(nock.isDone()).to.be.true;
@@ -412,7 +412,7 @@ describe('OpenHAB Tests', function () {
 
     it('item not found error', async function () {
       // set environment
-      nock(baseURL).post('/rest/items/foo', '42').reply(404);
+      nock(baseUrl).post('/rest/items/foo', '42').reply(404);
       // run test
       try {
         await openhab.sendCommand('foo', 42);
@@ -426,7 +426,7 @@ describe('OpenHAB Tests', function () {
   describe('update item state', function () {
     it('successful', async function () {
       // set environment
-      nock(baseURL).put('/rest/items/foo/state', '42').reply(202);
+      nock(baseUrl).put('/rest/items/foo/state', '42').reply(202);
       // run test
       await openhab.postUpdate('foo', 42);
       expect(nock.isDone()).to.be.true;
@@ -434,12 +434,37 @@ describe('OpenHAB Tests', function () {
 
     it('item state null error', async function () {
       // set environment
-      nock(baseURL).put('/rest/items/foo/state', 'invalid').reply(400);
+      nock(baseUrl).put('/rest/items/foo/state', 'invalid').reply(400);
       // run test
       try {
         await openhab.postUpdate('foo', 'invalid');
       } catch (error) {
         expect(error).to.be.instanceof(AxiosError).and.nested.include({ 'response.status': 400 });
+      }
+      expect(nock.isDone()).to.be.true;
+    });
+  });
+
+  describe('send alexa directive', function () {
+    // set environment
+    const directive = { header: { namespace: 'Alexa.Discovery', name: 'Discover' } };
+
+    it('successful', async function () {
+      // set environment
+      nock(baseUrl).post('/alexa/smarthome', directive).reply(202);
+      // run test
+      expect(await openhab.sendAlexaDirective(directive)).to.include({ status: 202 });
+      expect(nock.isDone()).to.be.true;
+    });
+
+    it('endpoint not found error', async function () {
+      // set environment
+      nock(baseUrl).post('/alexa/smarthome', directive).reply(404);
+      // run test
+      try {
+        await openhab.sendAlexaDirective(directive);
+      } catch (error) {
+        expect(error).to.be.instanceof(AxiosError).and.nested.include({ 'response.status': 404 });
       }
       expect(nock.isDone()).to.be.true;
     });

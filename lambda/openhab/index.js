@@ -206,6 +206,21 @@ export default class OpenHAB {
   }
 
   /**
+   * Sends an alexa smarthome directive to binding
+   * @param  {Object}  request
+   * @return {Promise}
+   */
+  sendAlexaDirective(request) {
+    const options = {
+      method: 'POST',
+      url: '/alexa/smarthome',
+      data: request,
+      resolveWithFullResponse: true
+    };
+    return this._client(options);
+  }
+
+  /**
    * Returns request client
    * @param  {Object} config
    * @param  {String} requestId
@@ -215,7 +230,7 @@ export default class OpenHAB {
    */
   static createClient(config, requestId, token, timeout) {
     const client = axios.create({
-      baseURL: config.baseURL,
+      baseURL: config.baseUrl,
       headers: {
         common: {
           'Cache-Control': 'no-cache',
@@ -227,7 +242,8 @@ export default class OpenHAB {
         // Set keep-alive free socket to timeout after 45s of inactivity
         freeSocketTimeout: 45000,
         timeout: parseInt(timeout)
-      })
+      }),
+      resolveWithFullResponse: false
     });
 
     // Add authentication options
@@ -244,7 +260,9 @@ export default class OpenHAB {
     }
 
     // Set response interceptor
-    client.interceptors.response.use((response) => response.data);
+    client.interceptors.response.use((response) =>
+      response.config.resolveWithFullResponse ? response : response.data
+    );
 
     return client;
   }

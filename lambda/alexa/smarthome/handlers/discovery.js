@@ -13,6 +13,7 @@
 
 import log from '#root/log.js';
 import { ItemType } from '#openhab/constants.js';
+import AlexaBinding from '../binding.js';
 import { Interface } from '../constants.js';
 import AlexaEndpoint from '../endpoint.js';
 import AlexaHandler from './handler.js';
@@ -61,10 +62,16 @@ export default class Discovery extends AlexaHandler {
    * @return {Promise}
    */
   static async discover(directive, openhab) {
-    // Request following data from openHAB:
-    //  - all items
-    //  - server settings
-    const [items, settings] = await Promise.all([openhab.getAllItems(), openhab.getServerSettings()]);
+    // Get server settings from openhab
+    const settings = await openhab.getServerSettings();
+
+    // Send directive to binding if required
+    if (AlexaBinding.isRequired(settings.runtime.version)) {
+      return AlexaBinding.handleDirective(directive, openhab);
+    }
+
+    // Get all items from openhab
+    const items = await openhab.getAllItems();
     const endpoints = [];
     const groupItems = [];
 

@@ -26,6 +26,16 @@
     "SkillId": {
       "Type": "String"
     },
+    "SkillClientId": {
+      "Type": "String"
+    },
+    "SkillClientSecret": {
+      "Type": "String"
+    },
+    "DatabaseTableName": {
+      "Type": "String",
+      "Default": "AlexaOpenHABSkillSettings"
+    },
     "LambdaFunctionName": {
       "Type": "String",
       "Default": "alexa-openhab"
@@ -57,7 +67,99 @@
       "Type": "String"
     }
   },
+  "Mappings": {
+    "RegionalMap": {
+      "us-east-1": {
+        "AlexaApiUrl": "https://api.amazonalexa.com",
+        "LoginWithAmazonApiUrl": "https://api.amazon.com"
+      },
+      "eu-west-1": {
+        "AlexaApiUrl": "https://api.eu.amazonalexa.com",
+        "LoginWithAmazonApiUrl": "https://api.amazon.co.uk"
+      },
+      "us-west-2": {
+        "AlexaApiUrl": "https://api.fe.amazonalexa.com",
+        "LoginWithAmazonApiUrl": "https://api.amazon.co.jp"
+      }
+    }
+  },
   "Resources": {
+    "AlexaSkillAPI": {
+      "Type": "AWS::ApiGatewayV2::Api",
+      "Properties": {
+        "Name": "AlexaOpenHABSkillAPI",
+        "Description": "openHAB Skill for Amazon Alexa REST API",
+        "ProtocolType": "HTTP"
+      }
+    },
+    "AlexaSkillAPIIntegration": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "AlexaSkillAPI"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationMethod": "POST",
+        "IntegrationUri": {
+          "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AlexaSkillFunction.Arn}/invocations"
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 10000
+      }
+    },
+    "AlexaSkillAPIAuthTokenRoute": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "AlexaSkillAPI"
+        },
+        "RouteKey": "POST /auth/token",
+        "Target": {
+          "Fn::Sub": "integrations/${AlexaSkillAPIIntegration}"
+        }
+      }
+    },
+    "AlexaSkillAPIStage": {
+      "Type": "AWS::ApiGatewayV2::Stage",
+      "DependsOn": [
+        "AlexaSkillAPIAuthTokenRoute"
+      ],
+      "Properties": {
+        "ApiId": {
+          "Ref": "AlexaSkillAPI"
+        },
+        "StageName": "$default",
+        "AutoDeploy": true,
+        "DefaultRouteSettings": {
+          "ThrottlingBurstLimit": 50,
+          "ThrottlingRateLimit": 100
+        }
+      }
+    },
+    "AlexaSkillDatabaseTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "userId",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "userId",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        },
+        "TableName": {
+          "Ref": "DatabaseTableName"
+        }
+      }
+    },
     "AlexaSkillIAMRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -84,6 +186,17 @@
             "PolicyDocument": {
               "Version": "2012-10-17",
               "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:DeleteItem",
+                    "dynamodb:GetItem",
+                    "dynamodb:PutItem"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DatabaseTableName}"
+                  }
+                },
                 {
                   "Effect": "Allow",
                   "Action": [
@@ -151,12 +264,61 @@
             },
             "OPENHAB_CERT_PASSPHRASE": {
               "Ref": "OpenHABCertPassphrase"
+            },
+            "SKILL_ID": {
+              "Ref": "SkillId"
+            },
+            "SKILL_CLIENT_ID": {
+              "Ref": "SkillClientId"
+            },
+            "SKILL_CLIENT_SECRET": {
+              "Ref": "SkillClientSecret"
+            },
+            "SKILL_TABLE_NAME": {
+              "Ref": "DatabaseTableName"
+            },
+            "SKILL_API_URL": {
+              "Fn::Sub": "https://${AlexaSkillAPI}.execute-api.${AWS::Region}.amazonaws.com"
+            },
+            "ALEXA_API_URL": {
+              "Fn::FindInMap": [
+                "RegionalMap",
+                {
+                  "Ref" : "AWS::Region"
+                },
+                "AlexaApiUrl"
+              ]
+            },
+            "LWA_API_URL": {
+              "Fn::FindInMap": [
+                "RegionalMap",
+                {
+                  "Ref" : "AWS::Region"
+                },
+                "LoginWithAmazonApiUrl"
+              ]
             }
           }
         }
       }
     },
-    "AlexaSkillFunctionPermission": {
+    "AlexaSkillFunctionAPIGatewayPermision": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "AlexaSkillFunction",
+            "Arn"
+          ]
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Sub": "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AlexaSkillAPI}/*"
+        }
+      }
+    },
+    "AlexaSkillFunctionSmartHomePermission": {
       "Type": "AWS::Lambda::Permission",
       "Properties": {
         "Action": "lambda:invokeFunction",
